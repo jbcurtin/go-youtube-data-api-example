@@ -1,7 +1,6 @@
 package main;
 
 import (
-    // http://p.agnihotry.com/post/understanding_the_context_package_in_golang/
     "encoding/json"
     "io/ioutil"
     "fmt"
@@ -13,6 +12,7 @@ import (
     "path/filepath"
     "flag"
 
+    // http://p.agnihotry.com/post/understanding_the_context_package_in_golang/
     "golang.org/x/net/context"
     "golang.org/x/oauth2"
     "golang.org/x/oauth2/google"
@@ -22,7 +22,6 @@ import (
 /// definitions
 type Options struct {
     account_name string
-    parts []string
 }
 
 type YoutubeChannel struct {
@@ -131,9 +130,11 @@ func handleError(err error, message string) {
     }
 }
 
-// func channelsListByUsername(service *youtube.Service, parts []string, forUsername string) {
 func extractChannelListByUsername(service *youtube.Service, options Options) []YoutubeChannel {
-    call := service.Channels.List(options.parts)
+    // https://developers.google.com/youtube/v3/docs/channels/list
+    // https://gobyexample.com/structs
+    var parts = []string{"snippet,contentDetails,statistics"}
+    call := service.Channels.List(parts)
     call = call.ForUsername(options.account_name)
     response, err := call.Do()
     handleError(err, "")
@@ -150,6 +151,7 @@ func extractChannelListByUsername(service *youtube.Service, options Options) []Y
     return channels
 }
 func extractVideosByPlaylistIdentity(identity string, service *youtube.Service) []YoutubeVideo {
+    // https://developers.google.com/youtube/v3/docs/playlistItems/list
     var parts = []string{"id,snippet"}
     call := service.PlaylistItems.List(parts)
     call = call.PlaylistId(identity)
@@ -164,6 +166,7 @@ func extractVideosByPlaylistIdentity(identity string, service *youtube.Service) 
     return videos
 }
 func extractPlaylistByChannel(channel YoutubeChannel, service *youtube.Service) []YoutubePlaylist {
+    // https://developers.google.com/youtube/v3/docs/playlists/list
     var parts = []string{"contentDetails,id,snippet"}
     call := service.Playlists.List(parts)
     call = call.ChannelId(channel.identity)
@@ -181,12 +184,14 @@ func extractPlaylistByChannel(channel YoutubeChannel, service *youtube.Service) 
     }
     return playlists
 }
+// Used to capture user input and store within an Options struct
+// https://gobyexample.com/command-line-flags
+// https://gobyexample.com/command-line-arguments
 func captureOptions() Options {
     account_name := flag.String("account-name", "foo", "Youtube Account Name")
     flag.Parse()
     return Options{
         *account_name,
-        []string{"snippet,contentDetails,statistics"},
     }
 }
 func main() {
@@ -194,9 +199,15 @@ func main() {
     ctx := context.Background()
     options := captureOptions()
     fmt.Println("Looking Up account: ", options.account_name)
+    // https://stackoverflow.com/questions/21397653/how-to-dump-methods-of-structs-in-golang
+    // fooType := reflect.TypeOf(options)
+    // for i := 0; i < fooType.NumMethod(); i++ {
+    //     method := fooType.Method(i)
+    //     fmt.Println(method.Name)
+    // }
 
 
-    // Setup Youtube
+    // Setup Google/Youtube
     b, err := ioutil.ReadFile("client_service.json")
     if err != nil {
         log.Fatalf("Unable to read client secret file: %v", err)
